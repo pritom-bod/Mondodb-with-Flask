@@ -1,76 +1,58 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for
 from bson import ObjectId
 from utils.db import db
 
 post_bp = Blueprint("post", __name__)
 
-# Create Post
-@post_bp.route("/posts", methods=["POST"])
+# list
+@post_bp.route("/posts")
+def list_posts():
+    posts = list(db.posts.find())
+    authors = {str(a["_id"]): a["name"] for a in db.authors.find()}
+    for p in posts:
+        p["_id"] = str(p["_id"])
+        p["author_id"] = str(p["author_id"])
+        p["author_name"] = authors.get(p["author_id"], "Unknown")
+    return render_template("posts/list.html", posts=posts)
+
+# create
+@post_bp.route("/posts/create", methods=["GET", "POST"])
 def create_post():
-    data = request.get_json()
-    title = data.get("title")
-    content = data.get("content")
-    author_id = data.get("author_id")
+    authors = list(db.authors.find())
+    for a in authors:
+        a["_id"] = str(a["_id"])
+    if request.method == "POST":
+        title = request.form["title"]
+        content = request.form["content"]
+        author_id = request.form["author_id"]
+        db.posts.insert_one({"title": title, "content": content, "author_id": ObjectId(author_id)})
+        return redirect(url_for("post.list_posts"))
+    return render_template("posts/create.html", authors=authors)
 
-    if not title or not content or not author_id:
-        return jsonify({"error": "Title, content and author_id are required"}), 400
-
-    if not ObjectId.is_valid(author_id):
-        return jsonify({"error": "Invalid author ID"}), 400
-
-    # check author
-    author = db.authors.find_one({"_id": ObjectId(author_id)})
-    if not author:
-        return jsonify({"error": "Author not found"}), 404
-
-    post = {
-        "title": title,
-        "content": content,
-        "author_id": ObjectId(author_id)
-    }
-    result = db.posts.insert_one(post)
-    return jsonify({"message": "Post created", "post_id": str(result.inserted_id)}), 201
-
-#get post by id
-@post_bp.route("/posts/<post_id>", methods=["GET"])
-def get_post(post_id):
-    if not ObjectId.is_valid(post_id):
-        return jsonify({"error": "Invalid post ID"}), 400
+# edit
+@post_bp.route("/posts/edit/<post_id>", methods=["GET", "POST"])
+def edit_post(post_id):
     post = db.posts.find_one({"_id": ObjectId(post_id)})
     if not post:
-        return jsonify({"error": "Post not found"}), 404
-
+        return "Post not found", 404
+    authors = list(db.authors.find())
+    for a in authors:
+        a["_id"] = str(a["_id"])
+    if request.method == "POST":
+        title = request.form["title"]
+        content = request.form["content"]
+        author_id = request.form["author_id"]
+        db.posts.update_one(
+            {"_id": ObjectId(post_id)},
+            {"$set": {"title": title, "content": content, "author_id": ObjectId(author_id)}}
+        )
+        return redirect(url_for("post.list_posts"))
     post["_id"] = str(post["_id"])
     post["author_id"] = str(post["author_id"])
-    return jsonify(post)
+    return render_template("posts/edit.html", post=post, authors=authors)
 
-# update post byid 
-@post_bp.route("/posts/<post_id>", methods=["PUT"])
-def update_post(post_id):
-    if not ObjectId.is_valid(post_id):
-        return jsonify({"error": "Invalid post ID"}), 400
-    data = request.get_json()
-    updated = db.posts.update_one({"_id": ObjectId(post_id)}, {"$set": data})
-    if updated.matched_count == 0:
-        return jsonify({"error": "Post not found"}), 404
-    return jsonify({"message": "Post updated successfully"})
-
-#delete  by id
-@post_bp.route("/posts/<post_id>", methods=["DELETE"])
+# delete
+@post_bp.route("/posts/delete/<post_id>")
 def delete_post(post_id):
-    if not ObjectId.is_valid(post_id):
-        return jsonify({"error": "Invalid post ID"}), 400
-    deleted = db.posts.delete_one({"_id": ObjectId(post_id)})
-    if deleted.deleted_count == 0:
-        return jsonify({"error": "Post not found"}), 404
-    return jsonify({"message": "Post deleted successfully"})
-
-#all data
-@post_bp.route("/posts", methods=["GET"])
-def get_all_posts():
-    posts = []
-    for post in db.posts.find():
-        post["_id"] = str(post["_id"])       
-        post["author_id"] = str(post["author_id"])   
-        posts.append(post)
-    return jsonify(posts)
+    db.posts.delete_one({"_id": ObjectId(post_id)})
+    return redirect(url_for("post.list_posts"))

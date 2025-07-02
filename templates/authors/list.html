@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Authors</h2>
+  <a href="/authors/create" class="btn btn-primary mb-3">Add Author</a>
+  <table class="table table-striped">
+    <thead>
+      <tr><th>Name</th><th>Email</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for a in authors %}
+      <tr>
+        <td>{{ a.name }}</td>
+        <td>{{ a.email }}</td>
+        <td>
+          <a href="/authors/edit/{{a._id}}" class="btn btn-warning btn-sm">Edit</a>
+          <a href="/authors/delete/{{a._id}}" class="btn btn-danger btn-sm">Delete</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

@@ -1,9 +1,4 @@
 from pymongo import MongoClient
-from bson import ObjectId
-# MongoDB Atlas or local connection string
-MONGO_URI = "mongodb+srv://pritomsarker406:2voCIiSjQBEYMvGb@cluster0.aegipsm.mongodb.net/"
 
-client = MongoClient(MONGO_URI)
+client = MongoClient("mongodb://localhost:27017/")
 db = client["blog_db"]
-
-

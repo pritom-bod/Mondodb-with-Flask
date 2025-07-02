@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Edit Post</h2>
+  <form method="post">
+    <div class="mb-3">
+      <label>Title</label>
+      <input type="text" name="title" class="form-control" value="{{post.title}}" required>
+    </div>
+    <div class="mb-3">
+      <label>Content</label>
+      <textarea name="content" class="form-control" required>{{post.content}}</textarea>
+    </div>
+    <div class="mb-3">
+      <label>Author</label>
+      <select name="author_id" class="form-control">
+        {% for a in authors %}
+          <option value="{{a._id}}" {% if a._id == post.author_id %}selected{% endif %}>{{a.name}}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-success">Update</button>
+  </form>
+{% endblock %}

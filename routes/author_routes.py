@@ -1,59 +1,43 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for
 from bson import ObjectId
 from utils.db import db
 
 author_bp = Blueprint("author", __name__)
 
-# create author
-@author_bp.route("/authors", methods=["POST"])
+# list
+@author_bp.route("/authors")
+def list_authors():
+    authors = list(db.authors.find())
+    for a in authors:
+        a["_id"] = str(a["_id"])
+    return render_template("authors/list.html", authors=authors)
+
+# create
+@author_bp.route("/authors/create", methods=["GET", "POST"])
 def create_author():
-    data = request.get_json()
-    name = data.get("name")
-    email = data.get("email")
-    if not name or not email:
-        return jsonify({"error": "Name and Email required"}), 400
+    if request.method == "POST":
+        name = request.form["name"]
+        email = request.form["email"]
+        db.authors.insert_one({"name": name, "email": email})
+        return redirect(url_for("author.list_authors"))
+    return render_template("authors/create.html")
 
-    author = {"name": name, "email": email}
-    result = db.authors.insert_one(author)
-    return jsonify({"message": "Author created", "author_id": str(result.inserted_id)}), 201
-
-# get author by ID
-@author_bp.route("/authors/<author_id>", methods=["GET"])
-def get_author(author_id):
-    if not ObjectId.is_valid(author_id):
-        return jsonify({"error": "Invalid author ID"}), 400
+# edit
+@author_bp.route("/authors/edit/<author_id>", methods=["GET", "POST"])
+def edit_author(author_id):
     author = db.authors.find_one({"_id": ObjectId(author_id)})
     if not author:
-        return jsonify({"error": "Author not found"}), 404
+        return "Author not found", 404
+    if request.method == "POST":
+        name = request.form["name"]
+        email = request.form["email"]
+        db.authors.update_one({"_id": ObjectId(author_id)}, {"$set": {"name": name, "email": email}})
+        return redirect(url_for("author.list_authors"))
     author["_id"] = str(author["_id"])
-    return jsonify(author)
+    return render_template("authors/edit.html", author=author)
 
-# update author by id
-@author_bp.route("/authors/<author_id>", methods=["PUT"])
-def update_author(author_id):
-    if not ObjectId.is_valid(author_id):
-        return jsonify({"error": "Invalid author ID"}), 400
-    data = request.get_json()
-    updated = db.authors.update_one({"_id": ObjectId(author_id)}, {"$set": data})
-    if updated.matched_count == 0:
-        return jsonify({"error": "Author not found"}), 404
-    return jsonify({"message": "Author updated successfully"})
-
-# delete author by od
-@author_bp.route("/authors/<author_id>", methods=["DELETE"])
+# delete
+@author_bp.route("/authors/delete/<author_id>")
 def delete_author(author_id):
-    if not ObjectId.is_valid(author_id):
-        return jsonify({"error": "Invalid author ID"}), 400
-    deleted = db.authors.delete_one({"_id": ObjectId(author_id)})
-    if deleted.deleted_count == 0:
-        return jsonify({"error": "Author not found"}), 404
-    return jsonify({"message": "Author deleted successfully"})
-
-#all data
-@author_bp.route("/authors", methods=["GET"])
-def get_all_authors():
-    authors = []
-    for author in db.authors.find():
-        author["_id"] = str(author["_id"])   
-        authors.append(author)
-    return jsonify(authors)
+    db.authors.delete_one({"_id": ObjectId(author_id)})
+    return redirect(url_for("author.list_authors"))

@@ -1,0 +1,23 @@
+
+{% extends "base.html" %}
+{% block content %}
+  <h2>Posts</h2>
+  <a href="/posts/create" class="btn btn-primary mb-3">Add Post</a>
+  <table class="table table-striped">
+    <thead>
+      <tr><th>Title</th><th>Author</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for p in posts %}
+      <tr>
+        <td>{{ p.title }}</td>
+        <td>{{ p.author_name }}</td>
+        <td>
+          <a href="/posts/edit/{{p._id}}" class="btn btn-warning btn-sm">Edit</a>
+          <a href="/posts/delete/{{p._id}}" class="btn btn-danger btn-sm">Delete</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
